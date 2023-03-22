@@ -1,0 +1,14 @@
+requests
+pymongo[srv]
+certifi
+streamlit
+pandas
+pdf2image
+zipfile
+pillow
+opencv-python-headless
+beautifulsoup4
+stqdm
+imagesize
+psutil
+pytesseract==0.3.10
