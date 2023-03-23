@@ -80,18 +80,28 @@ if st.session_state['uploaded_pdf'] is not None:
 
             QUESTIONTEXT_EXTRACTED = [i['questionText'] for i in jsonsised_data['questions']]
             QUESTIONID_EXTRACTED = [i['questionId'] for i in jsonsised_data['questions']]
-            ANSWER_START = st.session_state['answer_page_start']#jsonsised_data['answer_page_start_id']
+            dfQuestions = pd.DataFrame({'questionText':QUESTIONTEXT_EXTRACTED,'questionId':QUESTIONID_EXTRACTED})
+            dfQuestions['strip_num'] = [strip_num(i) for i in list(dfQuestions['questionText'].values)]
+            dfQuestions.dropna(subset=['strip_num'], inplace=True)
+            dfQuestions['strip_num'] = dfQuestions['strip_num'].astype('int32')
 
-            ANSWER_IMAGES = list(sorted(st.session_state['image_file_paths'], key = image_name_sorting))[ANSWER_START:]
-            print(ANSWER_IMAGES)
+            if dfQuestions.shape[0] == 0:
+                st.error(f"PDF identified with regex with no numbering(questions), CD method to be used", icon="❌")
+                st.stop()
 
+            if jsonsised_data['answer_page_start_fromStreamlitInput'] != -1:
+                ANSWER_START = jsonsised_data['answer_page_start_fromStreamlitInput']  #st.session_state['answer_page_start']#
+                ANSWER_IMAGES = list(sorted(st.session_state['image_file_paths'], key = image_name_sorting))[ANSWER_START-1:]
+                print(ANSWER_IMAGES)
+
+            else:
+                ANSWER_IMAGES = list(sorted(st.session_state['image_file_paths'], key = image_name_sorting))
+                print(ANSWER_IMAGES)
+            
             st.markdown(f"""<h5 style="color:yellow">Click on the button below to start parsing answers and mapping to questions</h5>""", unsafe_allow_html=True)
 
             if st.button("Run Pipeline"):
                 
-                print("Username is :: " + str(st.session_state['Username']) + " :: " + str(type(st.session_state['Username'])))
-                print(st.session_state['Password'])
-
                 try:
                     TOKEN, _  = connect_DB(st.session_state['Username'], st.session_state['Password'])
                     #TOKEN, _  = connect_DB("mahesh@tryjackett.com", "mahesh_test")
@@ -103,16 +113,6 @@ if st.session_state['uploaded_pdf'] is not None:
                 html_ans_data = ""
                 pytesseract_ans_data = ""
                 for page_num, image_path in enumerate(ANSWER_IMAGES):
-                    """if obj_bb.cols == 1: # base_dir/image_name.EXTENSION
-                        split_num = 0
-                        original_image_name = image_path
-
-                    else: # basedir/image_name-<SPLIT-x>.EXTENSION
-                        first_part, second_part = image_path.split("-<SPLIT-")
-                        ext = second_part[2:] # Image extenstion as  it'll be 0>.png 1>.jpeg etc 
-                        split_num = int(second_part[0]) # Gives you a number 0>.png gives 0, 1>.jpeg gives 1 etc
-                        base, image_name = first_part.split("/")
-                        original_image_name = os.path.join(base,"original_images",image_name+ext)"""
                     
                     print("Starting to call mathPix")
                     print(image_path)
@@ -173,7 +173,9 @@ if st.session_state['uploaded_pdf'] is not None:
                 a2_regex_matches_mathPix = re.findall(a2, html_ans_data)
 
                 a1_regex_matches_pyt = re.findall(a1, pytesseract_ans_data)
-
+                print('Regex mathces from pyta1 :: ' + str(len(a1_regex_matches_pyt)))
+                print('Regex mathces from mathPix a1 :: ' + str(len(a1_regex_matches_mathPix)))
+                print('Regex mathces from mathPix a2 :: ' + str(len(a2_regex_matches_mathPix)))
                 if a1_regex_matches_pyt > a1_regex_matches_mathPix and a1_regex_matches_pyt> a2_regex_matches_mathPix:
                     print("pytesseract OCR engine to be used")
                     answer_data_to_parse = pytesseract_ans_data
@@ -190,8 +192,10 @@ if st.session_state['uploaded_pdf'] is not None:
         
                         st.stop()
                     elif len(a2_regex_matches_mathPix) > len(a1_regex_matches_mathPix):
+                        print('Using a2 regex')
                         selected_answer_regex = a2
                     else:
+                        print('Using a1 regex')
                         selected_answer_regex = a1
                 print("selected_answer_regex is :: ", str(selected_answer_regex))
 
@@ -199,24 +203,22 @@ if st.session_state['uploaded_pdf'] is not None:
                 print("Number of answers identified :: ", str(len(answers_identified)))
 
                 ### Mapping question answer
-                dfQuestions = pd.DataFrame({'questionText':QUESTIONTEXT_EXTRACTED,'questionId':QUESTIONID_EXTRACTED})
-                dfQuestions['strip_num'] = [strip_num(i) for i in list(dfQuestions['questionText'].values)]
-                dfQuestions.dropna(subset=['strip_num'], inplace=True)
-
-                dfQuestions['strip_num'] = dfQuestions['strip_num'].astype('int32')
-
-
                 dfAnswers = pd.DataFrame(answers_identified, columns=['questionText'])
                 dfAnswers['strip_num'] = [strip_num(i) for i in list(dfAnswers['questionText'].values)]
                 dfAnswers.dropna(subset=['strip_num'], inplace=True)
                 print("dfAnswers shape is ::" + str(dfAnswers.shape))
 
                 dfAnswers['strip_num'] = dfAnswers['strip_num'].astype('int32')
+                if dfAnswers.shape[0] == 0:
+                    st.error(f"PDF identified with regex with no numbering(answers), CD method to be used", icon="❌")
+                    st.stop()
 
 
                 dfQuestions = mark_section(dfQuestions)
                 dfAnswers = mark_section(dfAnswers)
 
+                dfQuestions['section_number'] = 0
+                dfAnswers['section_number'] = 0
                 number_of_sections_que = dfQuestions['section_number'].nunique()
                 number_of_sections_ans = dfAnswers['section_number'].nunique()
                 print("Starting Mapping ")
@@ -232,9 +234,7 @@ if st.session_state['uploaded_pdf'] is not None:
                         st.info(f"\n{round((sum([True for i in questions_test if i[1] != ''])/len(questions_test)), 3)*100}% of the Found Questions have been mapped automatically")
 
                         for idx, row in dfQuestions.head(20).iterrows():
-                            print(idx)
-                            print(row['section_number'])
-                            print(row['strip_num'])
+                            
                             temp_answer_df = dfAnswers[(dfAnswers['section_number']==row['section_number']) & (dfAnswers['strip_num']==row['strip_num'])]
                             if temp_answer_df.shape[0] != 0:
                                 temp_answer = temp_answer_df['questionText'].values[0]
@@ -256,8 +256,3 @@ if st.session_state['uploaded_pdf'] is not None:
                     appam_json = json.dumps(OUTPUT_DATA)
                     st.download_button(label="Download APPAM JSON", file_name="answer_data.json", mime="application/json", data=appam_json)
                     st.stop()
-
-                    
-
-                    
-                    

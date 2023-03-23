@@ -118,6 +118,10 @@ def auto_map_question_answer(questions:list, answers:list):
 
 def mark_section(question_df):
 
+    print(question_df.shape)
+    print(question_df.head())
+    print(question_df['strip_num'].value_counts())
+    print(question_df['strip_num'].value_counts().index)
     least_number_in_each_section = int(question_df['strip_num'].value_counts().index[0])
     number_of_sections = int(list(question_df['strip_num'].value_counts().values)[0])
 
