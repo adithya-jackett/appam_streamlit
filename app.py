@@ -1,6 +1,7 @@
 from helpers import *
 from app_helpers import *
 from answer_parsing_helpers import *
+from config import *
 
 import pytesseract
 from pytesseract import Output
