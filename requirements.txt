@@ -4,7 +4,6 @@ certifi
 streamlit
 pandas
 pdf2image
-zipfile
 pillow
 opencv-python-headless
 beautifulsoup4
