@@ -26,8 +26,8 @@ import stqdm
 init_states()
 st.set_page_config(page_title="APPAM Model :: Answer Digitisation", layout = "wide")
 
-MATHPIX_API_ID = st.secrets["MATHPIX_API_ID"]
-MATHPIX_API_KEY = st.secrets["MATHPIX_API_KEY"]
+#MATHPIX_API_ID = st.secrets["MATHPIX_API_ID"]
+#MATHPIX_API_KEY = st.secrets["MATHPIX_API_KEY"]
 
 a1 = re.compile('((?:\d+(?:\s+|.)  \([a-z]\)))')  ## mcq
 a2 = re.compile('((?:\\n\\d+\\.)(?:\\s+|<br>|</br>|<br/>))')
