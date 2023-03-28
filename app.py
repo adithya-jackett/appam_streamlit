@@ -90,14 +90,14 @@ if st.session_state['uploaded_pdf'] is not None:
                 st.error(f"PDF identified with regex with no numbering(questions), CD method to be used", icon="❌")
                 st.stop()
 
-            if jsonsised_data['answer_page_start_fromStreamlitInput'] != -1:
-                ANSWER_START = jsonsised_data['answer_page_start_fromStreamlitInput']  #st.session_state['answer_page_start']#
-                ANSWER_IMAGES = list(sorted(st.session_state['image_file_paths'], key = image_name_sorting))[ANSWER_START-1:]
-                print(ANSWER_IMAGES)
+            #if jsonsised_data['answer_page_start_fromStreamlitInput'] != -1:
+            #    ANSWER_START = jsonsised_data['answer_page_start_fromStreamlitInput']  #st.session_state['answer_page_start']#
+            #    ANSWER_IMAGES = list(sorted(st.session_state['image_file_paths'], key = image_name_sorting))[ANSWER_START-1:]
+            #    print(ANSWER_IMAGES)
 
-            else:
-                ANSWER_IMAGES = list(sorted(st.session_state['image_file_paths'], key = image_name_sorting))
-                print(ANSWER_IMAGES)
+            #else:
+            #    ANSWER_IMAGES = list(sorted(st.session_state['image_file_paths'], key = image_name_sorting))
+            #    print(ANSWER_IMAGES)
             
             st.markdown(f"""<h5 style="color:yellow">Click on the button below to start parsing answers and mapping to questions</h5>""", unsafe_allow_html=True)
 
@@ -111,65 +111,15 @@ if st.session_state['uploaded_pdf'] is not None:
                     st.error("Authentication Error: Enter correct Username and Password")
                     st.stop()
 
-                html_ans_data = ""
-                pytesseract_ans_data = ""
-                for page_num, image_path in enumerate(ANSWER_IMAGES):
-                    
-                    print("Starting to call mathPix")
-                    print(image_path)
-                    ocr_returned = True
-                    original_image_name = image_path
-                    error_pages = {"page":[],"cause":[]}
-                    try:
-                        mathpix_response = get_mathPix_OCR(image_path, MATHPIX_API_ID, MATHPIX_API_KEY)
-                    except Exception as e:
-                        error_pages["page"].append(original_image_name)
-                        error_pages["cause"].append("MathPix didn't return Any Data")
-                        print_exc()
-                        continue
-
-                    if "error" in mathpix_response:
-                        st.warning(f"Error | {mathpix_response['error']} | returned by MathPix instead of OCR for image: {image_path}")
-                        error_pages["page"].append(original_image_name)
-                        error_pages["cause"].append(mathpix_response['error'])
-                        continue
-                    
-                    if "html" in mathpix_response:
-                        page_text = mathpix_response['html']
-                    else:
-                        ocr_returned = False
-                        for res in [1280, 720, 480, 224]:
-                            resize(image_path, res).save(image_path)
-                            mathpix_response = get_mathPix_OCR(image_path, MATHPIX_API_ID, MATHPIX_API_KEY)
-                            if "html" in mathpix_response:
-                                page_text = mathpix_response['html']
-                                ocr_returned = True
-                                break
-
-                    pytesseract_text = get_pytesseract_text(image_path)
-                    pytesseract_text = pytesseract_text.replace("\n", " ").strip()
-
-                    OUTPUT_DATA['page_wise_mathPix'].append({image_path:mathpix_response})
-                    OUTPUT_DATA['page_wise_mathPix_html'].append({image_path:page_text})
-
-                    OUTPUT_DATA['page_wise_pytesseract'].append({image_path:pytesseract_text})
+                
 
 
-                    try:
-                        html_ans_data += preprocess_text(page_text, "q3")
-                        html_ans_data += "\n"
-                    except Exception as e:
-                        st.warning(f"Error | {e} | while appending html data : {image_path}")
-                        html_ans_data += "\n"
+                OUTPUT_DATA['answer_mathPix'] = jsonsised_data['answer_complete_mathPix']
+                OUTPUT_DATA['answer_tesseract'] = jsonsised_data['answer_complete_pytesseract']
 
-                    pytesseract_ans_data += pytesseract_text
-                    pytesseract_ans_data += "\n"
-
-                print("MathPix extraction done")
-
-                OUTPUT_DATA['answer_mathPix'] = html_ans_data
-                OUTPUT_DATA['answer_tesseract'] = pytesseract_ans_data
-
+                html_ans_data = jsonsised_data['answer_complete_mathPix']
+                pytesseract_ans_data = jsonsised_data['answer_complete_pytesseract']
+                
                 a1_regex_matches_mathPix = re.findall(a1, html_ans_data)
                 a2_regex_matches_mathPix = re.findall(a2, html_ans_data)
 
