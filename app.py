@@ -129,10 +129,12 @@ if st.session_state['uploaded_pdf'] is not None:
                 print('Regex mathces from mathPix a2 :: ' + str(len(a2_regex_matches_mathPix)))
                 if a1_regex_matches_pyt > a1_regex_matches_mathPix and a1_regex_matches_pyt> a2_regex_matches_mathPix:
                     print("pytesseract OCR engine to be used")
+                    ocr_engine_in_use = "tesseract"
                     answer_data_to_parse = pytesseract_ans_data
                     selected_answer_regex = a1
 
                 else:
+                    ocr_engine_in_use = "mathPix"
                     print("mathPix OCR engine to be used")
                     answer_data_to_parse = html_ans_data
                     if len(a2_regex_matches_mathPix)==0 and len(a1_regex_matches_mathPix)==0:
@@ -168,6 +170,9 @@ if st.session_state['uploaded_pdf'] is not None:
                 dfQuestions = mark_section(dfQuestions)
                 dfAnswers = mark_section(dfAnswers)
 
+                OUTPUT_DATA['answers_identified'] = list(dfAnswers['questionText'].values)
+                OUTPUT_DATA['answer_mathPix_raw'] = jsonsised_data['answer_mathPix']
+
                 dfQuestions['section_number'] = 0
                 dfAnswers['section_number'] = 0
                 number_of_sections_que = dfQuestions['section_number'].nunique()
@@ -189,8 +194,9 @@ if st.session_state['uploaded_pdf'] is not None:
                             temp_answer_df = dfAnswers[(dfAnswers['section_number']==row['section_number']) & (dfAnswers['strip_num']==row['strip_num'])]
                             if temp_answer_df.shape[0] != 0:
                                 temp_answer = temp_answer_df['questionText'].values[0]
+                                answer_image_id = identify_answer_image(jsonsised_data['answer_mathPix'], ocr_engine_in_use, temp_answer)
                                 #callUpdateQuestionAPI(questionsCollection, TOKEN, "f0593d17-2bee-4272-890e-92f0fa87c792", row['questionText'], temp_answer)
-                                callUpdateQuestionAPI(questionsCollection, TOKEN, row['questionId'], row['questionText'], temp_answer)
+                                callUpdateQuestionAPI(questionsCollection, TOKEN, row['questionId'], row['questionText'], temp_answer, answer_image_id)
                                 print("updated in db")
                             else:
                                 print("Answer not present")

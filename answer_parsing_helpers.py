@@ -213,7 +213,7 @@ def mark_answer(answer:str):
     
     return ans
 
-def callUpdateQuestionAPI(questionsCollection, TOKEN, UPDATE_QUESTION_ID, UPDATE_QUESTION_TEXT, in_answer_text):
+def callUpdateQuestionAPI(questionsCollection, TOKEN, UPDATE_QUESTION_ID, UPDATE_QUESTION_TEXT, in_answer_text, answer_image_id):
 
     UPDATE_QUESTION_URL = "http://jackett-development-v1.ap-southeast-1.elasticbeanstalk.com/api/v3/questions/"
     UPDATE_QUESTION_URL = UPDATE_QUESTION_URL + UPDATE_QUESTION_ID
@@ -232,6 +232,7 @@ def callUpdateQuestionAPI(questionsCollection, TOKEN, UPDATE_QUESTION_ID, UPDATE
     update_answer_data = {}
     update_answer_data['options'] = []
     update_answer_data['answers'] = []
+    update_answer_data['answerSourceImageId'] = answer_image_id
 
     mongo_question_data = get_question_data_from_mongo(questionsCollection, UPDATE_QUESTION_ID)
     print("question data exttracted from db")
@@ -261,3 +262,17 @@ def callUpdateQuestionAPI(questionsCollection, TOKEN, UPDATE_QUESTION_ID, UPDATE
 
 
     return 
+
+
+def identify_answer_image(page_wise_response, selected_ocr_engine, answer):
+    if selected_ocr_engine == "tesseract": 
+        page_response_to_check = page_wise_response['tesseract_out']
+    elif selected_ocr_engine == "mathPix":
+        page_response_to_check = page_wise_response['mathpix_response']
+        
+    answer_source_image_id = ""
+    for i in page_response_to_check:
+        if str(answer) in str(i):
+            answer_source_image_id = i['answer_source_image_id']
+    
+    return answer_source_image_id
